@@ -1,7 +1,7 @@
-import { MessageCircle, Receipt, PieChart, Settings } from 'lucide-react';
+import { MessageCircle, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type Tab = 'chat' | 'transactions' | 'insights' | 'settings';
+type Tab = 'ask-ai' | 'history';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -9,10 +9,8 @@ interface BottomNavProps {
 }
 
 const navItems: { id: Tab; icon: React.ElementType; label: string }[] = [
-  { id: 'chat', icon: MessageCircle, label: 'Chat' },
-  { id: 'transactions', icon: Receipt, label: 'History' },
-  { id: 'insights', icon: PieChart, label: 'Insights' },
-  { id: 'settings', icon: Settings, label: 'Settings' },
+  { id: 'ask-ai', icon: MessageCircle, label: 'Ask AI' },
+  { id: 'history', icon: History, label: 'History' },
 ];
 
 export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
@@ -24,7 +22,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
             key={id}
             onClick={() => onTabChange(id)}
             className={cn(
-              'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all',
+              'flex flex-col items-center gap-1 px-8 py-2 rounded-xl transition-all',
               activeTab === id
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
