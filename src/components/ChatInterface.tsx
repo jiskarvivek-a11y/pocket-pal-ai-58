@@ -1,70 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Mic } from 'lucide-react';
-import { ChatMessage, Category, Transaction, mockTransactions, formatCurrency, formatDate, formatTime, categoryConfig } from '@/lib/mockData';
+import { Send } from 'lucide-react';
+import { ChatMessage, Category, categoryConfig, formatCurrency } from '@/lib/types';
 import { CategorySelector } from './CategorySelector';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useCreateTransaction } from '@/hooks/useTransactions';
+import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
-interface ChatInterfaceProps {
-  transactions: Transaction[];
-}
+const merchantNames = [
+  'Cafe Coffee Day', 'Swiggy', 'Zomato', 'BigBasket', 'DMart',
+  'Apollo Pharmacy', 'MedPlus', 'Uber', 'Ola', 'Rapido',
+  'PVR Cinemas', 'BookMyShow', 'Myntra', 'Flipkart', 'Amazon',
+  'Local Vendor', 'Street Food', 'Grocery Store', 'Medical Store'
+];
 
-// Simple response generator based on query patterns
-const generateResponse = (query: string, transactions: Transaction[]): string => {
-  const lowerQuery = query.toLowerCase();
-  
-  // Date-based queries
-  if (lowerQuery.includes('15th') || lowerQuery.includes('january 15')) {
-    const dayTransactions = transactions.filter(t => t.timestamp.getDate() === 15);
-    if (dayTransactions.length === 0) return "Looks like you didn't make any payments on January 15th.";
-    
-    let response = `Looks like you made ${dayTransactions.length} payment${dayTransactions.length > 1 ? 's' : ''} on 15th January:\n\n`;
-    dayTransactions.forEach((t, i) => {
-      const config = categoryConfig[t.category];
-      response += `${i + 1}. ${formatCurrency(t.amount)} at ${t.merchantName} (${config.label}) - ${formatTime(t.timestamp)}\n`;
-    });
-    return response.trim();
-  }
-  
-  // Category queries
-  if (lowerQuery.includes('food')) {
-    const foodTransactions = transactions.filter(t => t.category === 'food');
-    const total = foodTransactions.reduce((sum, t) => sum + t.amount, 0);
-    let response = `You've spent ${formatCurrency(total)} on Food recently:\n\n`;
-    foodTransactions.forEach(t => {
-      response += `• ${formatDate(t.timestamp)}: ${formatCurrency(t.amount)} at ${t.merchantName}\n`;
-    });
-    return response.trim();
-  }
-  
-  if (lowerQuery.includes('medical') || lowerQuery.includes('pharmacy')) {
-    const medicalTransactions = transactions.filter(t => t.category === 'medical');
-    const total = medicalTransactions.reduce((sum, t) => sum + t.amount, 0);
-    return `You've spent ${formatCurrency(total)} on Medical expenses. Your last medical purchase was ${formatCurrency(medicalTransactions[0]?.amount || 0)} at ${medicalTransactions[0]?.merchantName || 'N/A'}.`;
-  }
-  
-  // Total spending
-  if (lowerQuery.includes('total') || lowerQuery.includes('how much')) {
-    const total = transactions.reduce((sum, t) => sum + t.amount, 0);
-    return `You've spent ${formatCurrency(total)} in total recently. Want me to break it down by category?`;
-  }
-  
-  // First payment query
-  if (lowerQuery.includes('first payment') || lowerQuery.includes('first transaction')) {
-    const first = transactions[0];
-    if (!first) return "I don't have any transaction records yet.";
-    return `You grabbed coffee and breakfast at ${first.merchantName} for ${formatCurrency(first.amount)} in the morning - similar to your usual weekday routine.`;
-  }
-  
-  // Greeting
-  if (lowerQuery.includes('hello') || lowerQuery.includes('hi') || lowerQuery.includes('hey')) {
-    return "Hey there! 👋 I'm your financial assistant. Ask me about your spending - like 'What did I spend on food?' or 'Show me my transactions from January 15th'";
-  }
-  
-  // Default
-  return "I can help you track your spending! Try asking:\n• 'What happened on 15th January?'\n• 'How much did I spend on food?'\n• 'What was my first payment for?'";
-};
-
-export const ChatInterface = ({ transactions }: ChatInterfaceProps) => {
+export const ChatInterface = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -75,8 +26,14 @@ export const ChatInterface = ({ transactions }: ChatInterfaceProps) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [pendingCategorization, setPendingCategorization] = useState<string | null>(null);
+  const [pendingCategorization, setPendingCategorization] = useState<{
+    amount: number;
+    merchantName: string;
+    paymentType: 'QR' | 'P2P';
+    isRegistered: boolean;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const createTransaction = useCreateTransaction();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,7 +43,7 @@ export const ChatInterface = ({ transactions }: ChatInterfaceProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -100,51 +57,118 @@ export const ChatInterface = ({ transactions }: ChatInterfaceProps) => {
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate response delay
-    setTimeout(() => {
-      const response = generateResponse(inputValue, transactions);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "Please sign in to access your transaction history.",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsTyping(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('chat-ai', {
+        body: { message: inputValue },
+      });
+
+      if (error) {
+        console.error('Chat error:', error);
+        throw error;
+      }
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response,
+        content: data.response || data.error || "I couldn't process your request.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "Sorry, I couldn't process your request. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } finally {
       setIsTyping(false);
-    }, 800);
-  };
-
-  const handleCategorySelect = (category: Category | 'custom') => {
-    if (category === 'custom') {
-      // Handle custom category input
-      const assistantMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: "What would you like to name this category?",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } else {
-      const config = categoryConfig[category];
-      const assistantMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Got it! Saved under ${config.emoji} ${config.label} 👍`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setPendingCategorization(null);
     }
   };
 
-  const simulateNewPayment = () => {
+  const handleCategorySelect = async (category: Category | 'custom') => {
+    if (!pendingCategorization) return;
+
+    if (category === 'custom') {
+      const assistantMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: "Custom categories are not supported yet. Please select from the available options.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      return;
+    }
+
+    const config = categoryConfig[category];
+    
+    try {
+      await createTransaction.mutateAsync({
+        amount: pendingCategorization.amount,
+        merchantName: pendingCategorization.merchantName,
+        category: category,
+        paymentType: pendingCategorization.paymentType,
+        isRegisteredMerchant: pendingCategorization.isRegistered,
+      });
+
+      const assistantMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `Got it! Saved ${formatCurrency(pendingCategorization.amount)} at ${pendingCategorization.merchantName} under ${config.emoji} ${config.label} 👍`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      const assistantMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: "Failed to save the transaction. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    }
+    
+    setPendingCategorization(null);
+  };
+
+  const simulateNewPayment = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error('Please sign in to simulate payments');
+      return;
+    }
+
     const amount = Math.floor(Math.random() * 500) + 50;
-    setPendingCategorization(Date.now().toString());
+    const isRegistered = Math.random() > 0.3;
+    const merchantName = merchantNames[Math.floor(Math.random() * merchantNames.length)];
+    const paymentType: 'QR' | 'P2P' = isRegistered ? 'QR' : 'P2P';
+    
+    setPendingCategorization({
+      amount,
+      merchantName,
+      paymentType,
+      isRegistered,
+    });
     
     const assistantMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'assistant',
-      content: `Quick question - what was this ${formatCurrency(amount)} payment for?`,
+      content: `Quick question - what was this ${formatCurrency(amount)} payment at **${merchantName}** for?`,
       timestamp: new Date(),
       categoryPrompt: true,
       pendingTransactionId: Date.now().toString(),
@@ -170,7 +194,9 @@ export const ChatInterface = ({ transactions }: ChatInterfaceProps) => {
                 message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'
               )}
             >
-              <p className="whitespace-pre-line text-sm">{message.content}</p>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
               {message.categoryPrompt && pendingCategorization && (
                 <div className="mt-3">
                   <CategorySelector onSelect={handleCategorySelect} />
@@ -220,7 +246,7 @@ export const ChatInterface = ({ transactions }: ChatInterfaceProps) => {
           </div>
           <button
             onClick={handleSend}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || isTyping}
             className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-5 h-5" />

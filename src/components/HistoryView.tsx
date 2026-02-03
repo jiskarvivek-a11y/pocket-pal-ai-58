@@ -1,28 +1,27 @@
 import { useState } from 'react';
 import { TransactionCard } from './TransactionCard';
 import { SpendingSummary } from './SpendingSummary';
-import { Transaction, formatDate } from '@/lib/mockData';
-import { Receipt, PieChart, Settings, Bell, Shield, HelpCircle } from 'lucide-react';
+import { useTransactions, useTransactionsByDate } from '@/hooks/useTransactions';
+import { Receipt, PieChart, Settings, Bell, Shield, HelpCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 type HistorySection = 'transactions' | 'insights' | 'settings';
 
-interface HistoryViewProps {
-  transactions: Transaction[];
-}
-
-export const HistoryView = ({ transactions }: HistoryViewProps) => {
+export const HistoryView = () => {
   const [activeSection, setActiveSection] = useState<HistorySection>('transactions');
+  const { groupedByDate, transactions, isLoading, error } = useTransactionsByDate();
+  const { signOut } = useAuth();
 
-  // Group transactions by date
-  const groupedTransactions = transactions.reduce((groups, transaction) => {
-    const date = formatDate(transaction.timestamp);
-    if (!groups[date]) {
-      groups[date] = [];
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error('Failed to sign out');
+    } else {
+      toast.success('Signed out successfully');
     }
-    groups[date].push(transaction);
-    return groups;
-  }, {} as Record<string, typeof transactions>);
+  };
 
   const sections: { id: HistorySection; icon: React.ElementType; label: string }[] = [
     { id: 'transactions', icon: Receipt, label: 'Transactions' },
@@ -31,11 +30,38 @@ export const HistoryView = ({ transactions }: HistoryViewProps) => {
   ];
 
   const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="gpay-card text-center py-8">
+          <p className="text-destructive">Failed to load transactions</p>
+          <p className="text-sm text-muted-foreground mt-2">Please try again later</p>
+        </div>
+      );
+    }
+
     switch (activeSection) {
       case 'transactions':
+        if (!groupedByDate || Object.keys(groupedByDate).length === 0) {
+          return (
+            <div className="gpay-card text-center py-8">
+              <p className="text-muted-foreground">No transactions yet.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Use "Simulate new payment" in the Ask AI tab to add some!
+              </p>
+            </div>
+          );
+        }
         return (
           <div className="space-y-6">
-            {Object.entries(groupedTransactions)
+            {Object.entries(groupedByDate)
               .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
               .map(([date, txns]) => (
                 <div key={date} className="space-y-3">
@@ -51,7 +77,7 @@ export const HistoryView = ({ transactions }: HistoryViewProps) => {
         );
 
       case 'insights':
-        return <SpendingSummary transactions={transactions} />;
+        return <SpendingSummary transactions={transactions || []} />;
 
       case 'settings':
         return (
@@ -74,6 +100,18 @@ export const HistoryView = ({ transactions }: HistoryViewProps) => {
                 </div>
               </button>
             ))}
+            <button
+              onClick={handleSignOut}
+              className="gpay-card w-full flex items-center gap-4 text-left hover:bg-destructive/10 transition-colors mt-4"
+            >
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-destructive" />
+              </div>
+              <div>
+                <p className="font-medium text-destructive">Sign Out</p>
+                <p className="text-sm text-muted-foreground">Log out of your account</p>
+              </div>
+            </button>
           </div>
         );
 

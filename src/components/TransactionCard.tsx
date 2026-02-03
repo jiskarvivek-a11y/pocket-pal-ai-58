@@ -1,4 +1,4 @@
-import { Transaction, formatCurrency, formatTime, categoryConfig } from '@/lib/mockData';
+import { Transaction, formatCurrency, formatTime, categoryConfig } from '@/lib/types';
 import { CategoryBadge } from './CategoryBadge';
 import { QrCode, Users } from 'lucide-react';
 
@@ -8,6 +8,7 @@ interface TransactionCardProps {
 
 export const TransactionCard = ({ transaction }: TransactionCardProps) => {
   const config = categoryConfig[transaction.category];
+  const timestamp = new Date(transaction.created_at);
   
   return (
     <div className="gpay-card flex items-center justify-between gap-4 animate-fade-in hover:scale-[1.01] transition-transform">
@@ -19,11 +20,11 @@ export const TransactionCard = ({ transaction }: TransactionCardProps) => {
           {config.emoji}
         </div>
         <div>
-          <p className="font-medium text-foreground">{transaction.merchantName}</p>
+          <p className="font-medium text-foreground">{transaction.merchant_name}</p>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{formatTime(transaction.timestamp)}</span>
+            <span>{formatTime(timestamp)}</span>
             <span className="text-border">•</span>
-            {transaction.paymentType === 'QR' ? (
+            {transaction.payment_type === 'QR' ? (
               <span className="flex items-center gap-1">
                 <QrCode className="w-3 h-3" /> QR
               </span>
@@ -36,7 +37,7 @@ export const TransactionCard = ({ transaction }: TransactionCardProps) => {
         </div>
       </div>
       <div className="text-right">
-        <p className="font-semibold text-foreground">{formatCurrency(transaction.amount)}</p>
+        <p className="font-semibold text-foreground">{formatCurrency(Number(transaction.amount))}</p>
         <CategoryBadge category={transaction.category} size="sm" />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Transaction, Category, categoryConfig, formatCurrency } from '@/lib/mockData';
+import { Transaction, Category, categoryConfig, formatCurrency } from '@/lib/types';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface SpendingSummaryProps {
@@ -6,10 +6,10 @@ interface SpendingSummaryProps {
 }
 
 export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
-  const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalSpent = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
   
   const categoryTotals = transactions.reduce((acc, t) => {
-    acc[t.category] = (acc[t.category] || 0) + t.amount;
+    acc[t.category] = (acc[t.category] || 0) + Number(t.amount);
     return acc;
   }, {} as Record<Category, number>);
 
@@ -20,6 +20,17 @@ export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
   const topCategory = sortedCategories[0];
   const topCategoryConfig = topCategory ? categoryConfig[topCategory[0]] : null;
 
+  if (transactions.length === 0) {
+    return (
+      <div className="gpay-card text-center py-8">
+        <p className="text-muted-foreground">No transactions yet.</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Use "Simulate new payment" in the Ask AI tab to add some!
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Total Spending Card */}
@@ -28,7 +39,7 @@ export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
         <p className="text-3xl font-bold">{formatCurrency(totalSpent)}</p>
         <div className="flex items-center gap-2 mt-2 text-sm opacity-90">
           <TrendingDown className="w-4 h-4" />
-          <span>12% less than last week</span>
+          <span>{transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
@@ -70,7 +81,7 @@ export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-primary" />
             <p className="text-sm text-foreground">
-              <span className="font-medium">{topCategoryConfig.emoji} {topCategoryConfig.label}</span> is your top spending category this week
+              <span className="font-medium">{topCategoryConfig.emoji} {topCategoryConfig.label}</span> is your top spending category
             </p>
           </div>
         </div>
