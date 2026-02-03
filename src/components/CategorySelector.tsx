@@ -1,4 +1,4 @@
-import { Category, categoryConfig } from '@/lib/mockData';
+import { Category, categoryConfig } from '@/lib/types';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

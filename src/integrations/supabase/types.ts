@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      transactions: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at: string
+          id: string
+          is_registered_merchant: boolean
+          merchant_name: string
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at?: string
+          id?: string
+          is_registered_merchant?: boolean
+          merchant_name: string
+          payment_type?: Database["public"]["Enums"]["payment_type"]
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["transaction_category"]
+          created_at?: string
+          id?: string
+          is_registered_merchant?: boolean
+          merchant_name?: string
+          payment_type?: Database["public"]["Enums"]["payment_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +55,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      payment_type: "QR" | "P2P"
+      transaction_category:
+        | "food"
+        | "daily"
+        | "medical"
+        | "transport"
+        | "entertainment"
+        | "shopping"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +189,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      payment_type: ["QR", "P2P"],
+      transaction_category: [
+        "food",
+        "daily",
+        "medical",
+        "transport",
+        "entertainment",
+        "shopping",
+      ],
+    },
   },
 } as const
