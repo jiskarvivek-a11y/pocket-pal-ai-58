@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { Transaction, Category, categoryConfig, formatCurrency } from '@/lib/types';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowLeft } from 'lucide-react';
+import { TransactionCard } from './TransactionCard';
 
 interface SpendingSummaryProps {
   transactions: Transaction[];
 }
 
 export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  
   const totalSpent = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
   
   const categoryTotals = transactions.reduce((acc, t) => {
@@ -14,11 +18,15 @@ export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
   }, {} as Record<Category, number>);
 
   const sortedCategories = Object.entries(categoryTotals)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 4) as [Category, number][];
+    .sort(([, a], [, b]) => b - a) as [Category, number][];
 
   const topCategory = sortedCategories[0];
   const topCategoryConfig = topCategory ? categoryConfig[topCategory[0]] : null;
+
+  // Filter transactions by selected category
+  const filteredTransactions = selectedCategory 
+    ? transactions.filter(t => t.category === selectedCategory)
+    : [];
 
   if (transactions.length === 0) {
     return (
@@ -27,6 +35,42 @@ export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
         <p className="text-sm text-muted-foreground mt-2">
           Use "Simulate new payment" in the Ask AI tab to add some!
         </p>
+      </div>
+    );
+  }
+
+  // Show category transactions view
+  if (selectedCategory) {
+    const config = categoryConfig[selectedCategory];
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className="flex items-center gap-2 text-primary hover:underline"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Insights
+        </button>
+        
+        <div className="gpay-card">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">{config.emoji}</span>
+            <div>
+              <h3 className="font-semibold text-foreground">{config.label}</h3>
+              <p className="text-sm text-muted-foreground">
+                {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} • {formatCurrency(categoryTotals[selectedCategory] || 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredTransactions
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .map((transaction) => (
+              <TransactionCard key={transaction.id} transaction={transaction} />
+            ))}
+        </div>
       </div>
     );
   }
@@ -52,7 +96,11 @@ export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
             const percentage = Math.round((amount / totalSpent) * 100);
             
             return (
-              <div key={category} className="space-y-1.5">
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className="w-full text-left space-y-1.5 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
                 <div className="flex justify-between items-center">
                   <span className="flex items-center gap-2 text-sm">
                     <span>{config.emoji}</span>
@@ -69,7 +117,7 @@ export const SpendingSummary = ({ transactions }: SpendingSummaryProps) => {
                     }}
                   />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

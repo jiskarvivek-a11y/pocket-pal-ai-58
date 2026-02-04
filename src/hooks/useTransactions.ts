@@ -7,13 +7,9 @@ export const useTransactions = () => {
   return useQuery({
     queryKey: ['transactions'],
     queryFn: async (): Promise<Transaction[]> => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -43,13 +39,10 @@ export const useCreateTransaction = () => {
 
   return useMutation({
     mutationFn: async (params: CreateTransactionParams) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
       const { data, error } = await supabase
         .from('transactions')
         .insert({
-          user_id: user.id,
+          user_id: null,
           amount: params.amount,
           merchant_name: params.merchantName,
           category: params.category,

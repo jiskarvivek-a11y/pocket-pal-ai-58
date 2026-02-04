@@ -5,7 +5,6 @@ import { CategorySelector } from './CategorySelector';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateTransaction } from '@/hooks/useTransactions';
-import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 
 const merchantNames = [
@@ -58,19 +57,6 @@ export const ChatInterface = () => {
     setIsTyping(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "Please sign in to access your transaction history.",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-        setIsTyping(false);
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke('chat-ai', {
         body: { message: inputValue },
       });
@@ -101,19 +87,8 @@ export const ChatInterface = () => {
     }
   };
 
-  const handleCategorySelect = async (category: Category | 'custom') => {
+  const handleCategorySelect = async (category: Category) => {
     if (!pendingCategorization) return;
-
-    if (category === 'custom') {
-      const assistantMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: "Custom categories are not supported yet. Please select from the available options.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      return;
-    }
 
     const config = categoryConfig[category];
     
@@ -147,12 +122,6 @@ export const ChatInterface = () => {
   };
 
   const simulateNewPayment = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast.error('Please sign in to simulate payments');
-      return;
-    }
-
     const amount = Math.floor(Math.random() * 500) + 50;
     const isRegistered = Math.random() > 0.3;
     const merchantName = merchantNames[Math.floor(Math.random() * merchantNames.length)];

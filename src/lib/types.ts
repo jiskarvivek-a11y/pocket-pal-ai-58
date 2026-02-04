@@ -1,10 +1,10 @@
-export type Category = 'food' | 'daily' | 'medical' | 'transport' | 'entertainment' | 'shopping';
+export type Category = 'food' | 'daily' | 'medical' | 'transport' | 'entertainment' | 'shopping' | 'other';
 
 export type PaymentType = 'QR' | 'P2P';
 
 export interface Transaction {
   id: string;
-  user_id: string;
+  user_id: string | null;
   amount: number;
   merchant_name: string;
   category: Category;
@@ -23,12 +23,13 @@ export interface ChatMessage {
 }
 
 export const categoryConfig: Record<Category, { label: string; emoji: string; color: string }> = {
-  food: { label: 'Food', emoji: '🍽️', color: 'bg-orange-100 text-orange-700' },
-  daily: { label: 'Daily Needs', emoji: '🛒', color: 'bg-blue-100 text-blue-700' },
-  medical: { label: 'Medical', emoji: '💊', color: 'bg-green-100 text-green-700' },
-  transport: { label: 'Transport', emoji: '🚗', color: 'bg-purple-100 text-purple-700' },
-  entertainment: { label: 'Entertainment', emoji: '🎬', color: 'bg-pink-100 text-pink-700' },
-  shopping: { label: 'Shopping', emoji: '🛍️', color: 'bg-yellow-100 text-yellow-700' },
+  food: { label: 'Food', emoji: '🍽️', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  daily: { label: 'Daily Needs', emoji: '🛒', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  medical: { label: 'Medical', emoji: '💊', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  transport: { label: 'Transport', emoji: '🚗', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
+  entertainment: { label: 'Entertainment', emoji: '🎬', color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300' },
+  shopping: { label: 'Shopping', emoji: '🛍️', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  other: { label: 'Other', emoji: '📦', color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300' },
 };
 
 export const formatCurrency = (amount: number): string => {
