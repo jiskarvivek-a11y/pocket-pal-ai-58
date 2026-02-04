@@ -1,9 +1,9 @@
 import { Category, categoryConfig } from '@/lib/types';
-import { Plus } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CategorySelectorProps {
-  onSelect: (category: Category | 'custom') => void;
+  onSelect: (category: Category) => void;
   className?: string;
 }
 
@@ -29,11 +29,11 @@ export const CategorySelector = ({ onSelect, className }: CategorySelectorProps)
         );
       })}
       <button
-        onClick={() => onSelect('custom')}
+        onClick={() => onSelect('other')}
         className="category-badge bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all hover:scale-105 active:scale-95 cursor-pointer"
       >
-        <Plus className="w-3.5 h-3.5" />
-        <span>Custom</span>
+        <Package className="w-3.5 h-3.5" />
+        <span>Other</span>
       </button>
     </div>
   );

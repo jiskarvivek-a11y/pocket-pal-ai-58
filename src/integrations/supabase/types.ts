@@ -23,7 +23,7 @@ export type Database = {
           is_registered_merchant: boolean
           merchant_name: string
           payment_type: Database["public"]["Enums"]["payment_type"]
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -33,7 +33,7 @@ export type Database = {
           is_registered_merchant?: boolean
           merchant_name: string
           payment_type?: Database["public"]["Enums"]["payment_type"]
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -43,7 +43,7 @@ export type Database = {
           is_registered_merchant?: boolean
           merchant_name?: string
           payment_type?: Database["public"]["Enums"]["payment_type"]
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -63,6 +63,7 @@ export type Database = {
         | "transport"
         | "entertainment"
         | "shopping"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -198,6 +199,7 @@ export const Constants = {
         "transport",
         "entertainment",
         "shopping",
+        "other",
       ],
     },
   },

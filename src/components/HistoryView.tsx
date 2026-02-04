@@ -1,27 +1,15 @@
 import { useState } from 'react';
 import { TransactionCard } from './TransactionCard';
 import { SpendingSummary } from './SpendingSummary';
-import { useTransactions, useTransactionsByDate } from '@/hooks/useTransactions';
+import { useTransactionsByDate } from '@/hooks/useTransactions';
 import { Receipt, PieChart, Settings, Bell, Shield, HelpCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
 
 type HistorySection = 'transactions' | 'insights' | 'settings';
 
 export const HistoryView = () => {
   const [activeSection, setActiveSection] = useState<HistorySection>('transactions');
   const { groupedByDate, transactions, isLoading, error } = useTransactionsByDate();
-  const { signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast.error('Failed to sign out');
-    } else {
-      toast.success('Signed out successfully');
-    }
-  };
 
   const sections: { id: HistorySection; icon: React.ElementType; label: string }[] = [
     { id: 'transactions', icon: Receipt, label: 'Transactions' },
@@ -100,18 +88,6 @@ export const HistoryView = () => {
                 </div>
               </button>
             ))}
-            <button
-              onClick={handleSignOut}
-              className="gpay-card w-full flex items-center gap-4 text-left hover:bg-destructive/10 transition-colors mt-4"
-            >
-              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-destructive" />
-              </div>
-              <div>
-                <p className="font-medium text-destructive">Sign Out</p>
-                <p className="text-sm text-muted-foreground">Log out of your account</p>
-              </div>
-            </button>
           </div>
         );
 
